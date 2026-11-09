@@ -1,8 +1,10 @@
 # C++ Desktop App Deployment Template
 
-A template for building and deploying C++ desktop applications via a single curl/PowerShell command.
+A template for building and deploying C++ desktop applications via a single curl/PowerShell command. Supports both public and private repos.
 
 ## For Users: Install the App
+
+### Public Repo
 
 **PowerShell:**
 ```powershell
@@ -14,12 +16,36 @@ irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/
 powershell -c "irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex"
 ```
 
+### Private Repo (requires token)
+
+**PowerShell:**
+```powershell
+$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
+```
+
+**Command Prompt (cmd):**
+```cmd
+powershell -c "$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex"
+```
+
 This will:
 - ✅ Download the latest release
 - ✅ Install to `%LOCALAPPDATA%\DeployableApp`
 - ✅ Copy exe to Desktop
 - ✅ Create desktop shortcut
 - ✅ Add to PATH (run from any terminal)
+
+---
+
+## Creating a GitHub Personal Access Token (PAT)
+
+1. Go to https://github.com/settings/tokens
+2. Click "Generate new token (classic)"
+3. Give it a name like "DeployableApp Installer"
+4. Select scopes:
+   - `repo` (Full control of private repositories)
+5. Click "Generate token"
+6. **Copy the token immediately** (you won't see it again!)
 
 ---
 
@@ -56,10 +82,16 @@ GitHub Actions will automatically:
 2. Create a GitHub Release
 3. Upload the `.exe` as a downloadable asset
 
-### 5. Users can now install/update
+### 5. Share!
 
+**Public repo:**
 ```powershell
 irm https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/install.ps1 | iex
+```
+
+**Private repo:**
+```powershell
+$env:GH_TOKEN='ghp_xxx'; irm https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/install.ps1 | iex
 ```
 
 Running the install command again will update to the latest version.

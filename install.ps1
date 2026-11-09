@@ -1,14 +1,18 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs MyApp from GitHub Releases
+    Installs DeployableApp from GitHub Releases (supports private repos)
     
 .DESCRIPTION
-    Downloads the latest release, installs to Program Files, 
+    Downloads the latest release, installs to AppData, 
     creates desktop shortcut, and adds to PATH.
     
 .EXAMPLE
-    irm https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.ps1 | iex
+    # Public repo:
+    irm https://raw.githubusercontent.com/USER/REPO/main/install.ps1 | iex
+    
+    # Private repo (set token first):
+    $env:GH_TOKEN='ghp_xxxxxxxxxxxx'; irm https://raw.githubusercontent.com/USER/REPO/main/install.ps1 | iex
 #>
 
 $ErrorActionPreference = "Stop"
@@ -25,9 +29,16 @@ $ExeName = "deployableapp.exe"
 $InstallDir = "$env:LOCALAPPDATA\$AppName"
 $ExePath = "$InstallDir\$ExeName"
 
+# Check for GitHub token (required for private repos)
+$Token = $env:GH_TOKEN
+$AuthHeaders = @{ "User-Agent" = "PowerShell" }
+if ($Token) {
+    $AuthHeaders["Authorization"] = "token $Token"
+}
+
 function Write-Step { param($msg) Write-Host "[*] $msg" -ForegroundColor Cyan }
 function Write-Success { param($msg) Write-Host "[✓] $msg" -ForegroundColor Green }
-function Write-Error { param($msg) Write-Host "[✗] $msg" -ForegroundColor Red }
+function Write-Err { param($msg) Write-Host "[✗] $msg" -ForegroundColor Red }
 
 Write-Host ""
 Write-Host "================================" -ForegroundColor Magenta
@@ -35,16 +46,25 @@ Write-Host "  $AppName Installer" -ForegroundColor Magenta
 Write-Host "================================" -ForegroundColor Magenta
 Write-Host ""
 
+if ($Token) {
+    Write-Success "Using GitHub token for authentication"
+} else {
+    Write-Host "[i] No GH_TOKEN set - assuming public repo" -ForegroundColor Yellow
+}
+
 # 1. Get latest release info from GitHub API
 Write-Step "Fetching latest release from GitHub..."
 try {
     $ApiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
-    $Release = Invoke-RestMethod -Uri $ApiUrl -Headers @{ "User-Agent" = "PowerShell" }
+    $Release = Invoke-RestMethod -Uri $ApiUrl -Headers $AuthHeaders
     $Version = $Release.tag_name
     Write-Success "Found version: $Version"
 } catch {
-    Write-Error "Failed to fetch release info. Check repo owner/name."
-    Write-Host "API URL: $ApiUrl" -ForegroundColor Yellow
+    Write-Err "Failed to fetch release info."
+    if (-not $Token) {
+        Write-Host "  If this is a private repo, set GH_TOKEN first:" -ForegroundColor Yellow
+        Write-Host '  $env:GH_TOKEN="ghp_your_token"; irm ... | iex' -ForegroundColor Yellow
+    }
     exit 1
 }
 
@@ -52,16 +72,14 @@ try {
 Write-Step "Looking for Windows binary..."
 $Asset = $Release.assets | Where-Object { $_.name -like "*windows*.exe" -or $_.name -eq $ExeName }
 if (-not $Asset) {
-    # Fallback: just grab the first .exe
     $Asset = $Release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
 }
 if (-not $Asset) {
-    Write-Error "No Windows executable found in release assets."
+    Write-Err "No Windows executable found in release assets."
     Write-Host "Available assets:" -ForegroundColor Yellow
     $Release.assets | ForEach-Object { Write-Host "  - $($_.name)" }
     exit 1
 }
-$DownloadUrl = $Asset.browser_download_url
 Write-Success "Found: $($Asset.name)"
 
 # 3. Create install directory
@@ -71,20 +89,33 @@ if (-not (Test-Path $InstallDir)) {
 }
 Write-Success "Install dir: $InstallDir"
 
-# 4. Download the executable
+# 4. Download the executable (use API URL for private repos)
 Write-Step "Downloading $($Asset.name)..."
 $TempFile = "$env:TEMP\$($Asset.name)"
 try {
-    # Remove old temp file if exists
+    # Remove old files if they exist
     if (Test-Path $TempFile) { Remove-Item $TempFile -Force }
-    # Remove old exe if exists (for updates)
     if (Test-Path $ExePath) { Remove-Item $ExePath -Force }
     
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
+    if ($Token) {
+        # For private repos, use the API endpoint with Accept header
+        $DownloadUrl = $Asset.url
+        $DownloadHeaders = @{
+            "User-Agent" = "PowerShell"
+            "Authorization" = "token $Token"
+            "Accept" = "application/octet-stream"
+        }
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -Headers $DownloadHeaders
+    } else {
+        # For public repos, use the browser download URL
+        $DownloadUrl = $Asset.browser_download_url
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
+    }
+    
     Move-Item -Path $TempFile -Destination $ExePath -Force
     Write-Success "Downloaded to $ExePath"
 } catch {
-    Write-Error "Download failed: $_"
+    Write-Err "Download failed: $_"
     exit 1
 }
 
@@ -133,3 +164,6 @@ Write-Host ""
 
 # Refresh PATH for current session
 $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+
+# Clear token from environment for security
+$env:GH_TOKEN = $null
