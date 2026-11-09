@@ -75,6 +75,11 @@ Write-Success "Install dir: $InstallDir"
 Write-Step "Downloading $($Asset.name)..."
 $TempFile = "$env:TEMP\$($Asset.name)"
 try {
+    # Remove old temp file if exists
+    if (Test-Path $TempFile) { Remove-Item $TempFile -Force }
+    # Remove old exe if exists (for updates)
+    if (Test-Path $ExePath) { Remove-Item $ExePath -Force }
+    
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
     Move-Item -Path $TempFile -Destination $ExePath -Force
     Write-Success "Downloaded to $ExePath"
