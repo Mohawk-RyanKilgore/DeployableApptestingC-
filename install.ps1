@@ -1,18 +1,15 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs DeployableApp from GitHub Releases (supports private repos)
+    Installs DeployableApp from GitHub Releases
     
 .DESCRIPTION
     Downloads the latest release, installs to AppData, 
     creates desktop shortcut, and adds to PATH.
+    Skips download if already running the latest version.
     
 .EXAMPLE
-    # Public repo:
-    irm https://raw.githubusercontent.com/USER/REPO/main/install.ps1 | iex
-    
-    # Private repo (set token first):
-    $env:GH_TOKEN='ghp_xxxxxxxxxxxx'; irm https://raw.githubusercontent.com/USER/REPO/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/cpp-installer-template/main/install.ps1 | iex
 #>
 
 $ErrorActionPreference = "Stop"
@@ -28,17 +25,14 @@ $ExeName = "deployableapp.exe"
 
 $InstallDir = "$env:LOCALAPPDATA\$AppName"
 $ExePath = "$InstallDir\$ExeName"
+$VersionFile = "$InstallDir\version.txt"
 
-# Check for GitHub token (required for private repos)
-$Token = $env:GH_TOKEN
 $AuthHeaders = @{ "User-Agent" = "PowerShell" }
-if ($Token) {
-    $AuthHeaders["Authorization"] = "token $Token"
-}
 
 function Write-Step { param($msg) Write-Host "[*] $msg" -ForegroundColor Cyan }
 function Write-Success { param($msg) Write-Host "[✓] $msg" -ForegroundColor Green }
 function Write-Err { param($msg) Write-Host "[✗] $msg" -ForegroundColor Red }
+function Write-Info { param($msg) Write-Host "[i] $msg" -ForegroundColor Yellow }
 
 Write-Host ""
 Write-Host "================================" -ForegroundColor Magenta
@@ -46,29 +40,45 @@ Write-Host "  $AppName Installer" -ForegroundColor Magenta
 Write-Host "================================" -ForegroundColor Magenta
 Write-Host ""
 
-if ($Token) {
-    Write-Success "Using GitHub token for authentication"
-} else {
-    Write-Host "[i] No GH_TOKEN set - assuming public repo" -ForegroundColor Yellow
-}
-
 # 1. Get latest release info from GitHub API
 Write-Step "Fetching latest release from GitHub..."
 try {
     $ApiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
     $Release = Invoke-RestMethod -Uri $ApiUrl -Headers $AuthHeaders
     $Version = $Release.tag_name
-    Write-Success "Found version: $Version"
+    Write-Success "Latest version: $Version"
 } catch {
     Write-Err "Failed to fetch release info."
-    if (-not $Token) {
-        Write-Host "  If this is a private repo, set GH_TOKEN first:" -ForegroundColor Yellow
-        Write-Host '  $env:GH_TOKEN="ghp_your_token"; irm ... | iex' -ForegroundColor Yellow
-    }
     exit 1
 }
 
-# 2. Find the Windows exe in release assets
+# 2. Check if already up-to-date
+$InstalledVersion = $null
+if (Test-Path $VersionFile) {
+    $InstalledVersion = (Get-Content $VersionFile -Raw).Trim()
+}
+
+if ($InstalledVersion -eq $Version) {
+    Write-Host ""
+    Write-Host "================================" -ForegroundColor Green
+    Write-Host "  Already Up-to-Date!" -ForegroundColor Green
+    Write-Host "================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  Installed: $InstalledVersion" -ForegroundColor White
+    Write-Host "  Latest:    $Version" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  No update needed." -ForegroundColor Yellow
+    Write-Host ""
+    exit 0
+}
+
+if ($InstalledVersion) {
+    Write-Info "Updating from $InstalledVersion to $Version"
+} else {
+    Write-Info "Fresh install of $Version"
+}
+
+# 3. Find the Windows exe in release assets
 Write-Step "Looking for Windows binary..."
 $Asset = $Release.assets | Where-Object { $_.name -like "*windows*.exe" -or $_.name -eq $ExeName }
 if (-not $Asset) {
@@ -76,42 +86,26 @@ if (-not $Asset) {
 }
 if (-not $Asset) {
     Write-Err "No Windows executable found in release assets."
-    Write-Host "Available assets:" -ForegroundColor Yellow
-    $Release.assets | ForEach-Object { Write-Host "  - $($_.name)" }
     exit 1
 }
 Write-Success "Found: $($Asset.name)"
 
-# 3. Create install directory
+# 4. Create install directory
 Write-Step "Creating install directory..."
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
 Write-Success "Install dir: $InstallDir"
 
-# 4. Download the executable (use API URL for private repos)
+# 5. Download the executable
 Write-Step "Downloading $($Asset.name)..."
 $TempFile = "$env:TEMP\$($Asset.name)"
 try {
-    # Remove old files if they exist
     if (Test-Path $TempFile) { Remove-Item $TempFile -Force }
     if (Test-Path $ExePath) { Remove-Item $ExePath -Force }
     
-    if ($Token) {
-        # For private repos, use the API endpoint with Accept header
-        $DownloadUrl = $Asset.url
-        $DownloadHeaders = @{
-            "User-Agent" = "PowerShell"
-            "Authorization" = "token $Token"
-            "Accept" = "application/octet-stream"
-        }
-        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -Headers $DownloadHeaders
-    } else {
-        # For public repos, use the browser download URL
-        $DownloadUrl = $Asset.browser_download_url
-        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
-    }
-    
+    $DownloadUrl = $Asset.browser_download_url
+    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
     Move-Item -Path $TempFile -Destination $ExePath -Force
     Write-Success "Downloaded to $ExePath"
 } catch {
@@ -119,7 +113,11 @@ try {
     exit 1
 }
 
-# 5. Add to PATH (user level)
+# 6. Save version file
+$Version | Out-File -FilePath $VersionFile -Encoding UTF8 -NoNewline
+Write-Success "Saved version info"
+
+# 7. Add to PATH (user level)
 Write-Step "Adding to PATH..."
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($UserPath -notlike "*$InstallDir*") {
@@ -130,14 +128,14 @@ if ($UserPath -notlike "*$InstallDir*") {
     Write-Success "Already in PATH"
 }
 
-# 6. Copy to Desktop
+# 8. Copy to Desktop
 Write-Step "Copying to Desktop..."
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 $DesktopExe = "$DesktopPath\$ExeName"
 Copy-Item -Path $ExePath -Destination $DesktopExe -Force
 Write-Success "Copied to $DesktopExe"
 
-# 7. Create Desktop Shortcut
+# 9. Create Desktop Shortcut
 Write-Step "Creating desktop shortcut..."
 $ShortcutPath = "$DesktopPath\$AppName.lnk"
 $WshShell = New-Object -ComObject WScript.Shell
@@ -148,7 +146,7 @@ $Shortcut.Description = "$AppName - Installed via curl"
 $Shortcut.Save()
 Write-Success "Created shortcut: $ShortcutPath"
 
-# 8. Done!
+# 10. Done!
 Write-Host ""
 Write-Host "================================" -ForegroundColor Green
 Write-Host "  Installation Complete!" -ForegroundColor Green
@@ -161,9 +159,9 @@ Write-Host ""
 Write-Host "  Run '$AppName' from any terminal, or" -ForegroundColor Yellow
 Write-Host "  double-click the desktop shortcut." -ForegroundColor Yellow
 Write-Host ""
+Write-Host "  To uninstall:" -ForegroundColor Gray
+Write-Host "  powershell -c `"irm https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/uninstall.ps1 | iex`"" -ForegroundColor Gray
+Write-Host ""
 
 # Refresh PATH for current session
 $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-
-# Clear token from environment for security
-$env:GH_TOKEN = $null
