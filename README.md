@@ -5,7 +5,7 @@ A C++ application template that can be installed with a single command.
 ## Quick Install (Windows)
 
 ```powershell
-irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC++/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
 ```
 
 This will:

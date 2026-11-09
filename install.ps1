@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 # ============================================
 $AppName = "DeployableApp"
 $RepoOwner = "Mohawk-RyanKilgore"
-$RepoName = "DeployableApptestingC++"
+$RepoName = "DeployableApptestingC-"
 $ExeName = "deployableapp.exe"
 # ============================================
 
