@@ -1,117 +1,113 @@
-# DeployableApp - Curl Installable C++ Application
+# C++ Desktop App Deployment Template
 
-A C++ application template that can be installed with a single command.
+A template for building and deploying C++ desktop applications via a single curl/PowerShell command.
 
-## Quick Install (Windows)
+## For Users: Install the App
 
 ```powershell
 irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
 ```
 
 This will:
-- ✅ Download the latest release from GitHub
-- ✅ Install to `%LOCALAPPDATA%\MyApp`
-- ✅ Copy the exe to your Desktop
-- ✅ Create a desktop shortcut
+- ✅ Download the latest release
+- ✅ Install to `%LOCALAPPDATA%\DeployableApp`
+- ✅ Copy exe to Desktop
+- ✅ Create desktop shortcut
 - ✅ Add to PATH (run from any terminal)
-
-## Usage
-
-After installation, run from any terminal:
-
-```bash
-myapp              # Show help
-myapp greet        # Print greeting
-myapp info         # Show system info
-myapp version      # Show version
-```
-
-Or double-click the desktop shortcut.
 
 ---
 
-## For Developers: How to Set This Up
+## For Developers: How to Use This Template
 
-### 1. Update the install script
+### 1. Clone/Fork this repo
 
-Edit `install.ps1` and change these lines:
+### 2. Customize the app
 
-```powershell
-$AppName = "MyApp"                  # Your app name
-$RepoOwner = "YOUR_USERNAME"        # Your GitHub username
-$RepoName = "YOUR_REPO"             # Your repo name
-$ExeName = "myapp.exe"              # Your exe filename
-```
+Edit these files:
+| File | What to change |
+|------|----------------|
+| `src/main.cpp` | Your C++ application code |
+| `install.ps1` | `$AppName`, `$RepoOwner`, `$RepoName`, `$ExeName` |
+| `CMakeLists.txt` | `project(YourAppName)` and `OUTPUT_NAME` |
 
-### 2. Update the C++ app
-
-Edit `src/main.cpp` to add your actual application logic.
-
-### 3. Push to GitHub
+### 3. Push your changes
 
 ```bash
-git init
 git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
+git commit -m "My app update"
+git push
 ```
 
-### 4. Create a release
-
-Tag and push to trigger the GitHub Action:
+### 4. Release a new version
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-The GitHub Action will:
-- Build your app on Windows
-- Create a GitHub Release
-- Upload `myapp.exe` as a release asset
+GitHub Actions will automatically:
+1. Build your C++ code on Windows
+2. Create a GitHub Release
+3. Upload the `.exe` as a downloadable asset
 
-### 5. Share!
-
-Now anyone can install your app with:
+### 5. Users can now install/update
 
 ```powershell
-irm https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/install.ps1 | iex
 ```
 
----
-
-## Building Locally
-
-### Prerequisites
-- CMake 3.16+
-- Visual Studio 2019+ or MinGW
-
-### Build
-
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-```
-
-The exe will be at `build/bin/Release/myapp.exe`
+Running the install command again will update to the latest version.
 
 ---
 
 ## Project Structure
 
 ```
-curl-installer-app/
 ├── src/
-│   └── main.cpp           # Your C++ application
+│   └── main.cpp              # Your C++ code (starts as Hello World)
 ├── .github/
 │   └── workflows/
-│       └── release.yml    # Auto-build on tag push
-├── install.ps1            # The curl-able installer
-├── CMakeLists.txt         # CMake build config
-└── README.md              # This file
+│       └── release.yml       # Auto-build on version tag
+├── install.ps1               # PowerShell installer script
+├── CMakeLists.txt            # CMake build configuration
+├── .gitignore
+└── README.md
 ```
+
+---
+
+## Configuration Reference
+
+### install.ps1 variables
+
+```powershell
+$AppName = "DeployableApp"              # Display name & install folder
+$RepoOwner = "Mohawk-RyanKilgore"       # GitHub username
+$RepoName = "DeployableApptestingC-"    # Repository name
+$ExeName = "deployableapp.exe"          # Output executable name
+```
+
+### CMakeLists.txt settings
+
+```cmake
+project(DeployableApp VERSION 1.0.0 LANGUAGES CXX)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OUTPUT_NAME "deployableapp"    # Must match $ExeName (without .exe)
+)
+```
+
+---
+
+## Versioning
+
+Use semantic versioning for releases:
+- `v1.0.0` - Major release
+- `v1.1.0` - New features
+- `v1.1.1` - Bug fixes
+
+---
 
 ## License
 
-MIT License - feel free to use this as a template for your own projects.
+MIT License - Use this template freely for your own projects.
