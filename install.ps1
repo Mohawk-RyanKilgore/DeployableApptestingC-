@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 # ============================================
 $AppName = "DeployableApp"
 $RepoOwner = "Mohawk-RyanKilgore"
-$RepoName = "DeployableApptestingC-"
+$RepoName = "cpp-installer-template"
 $ExeName = "deployableapp.exe"
 # ============================================
 

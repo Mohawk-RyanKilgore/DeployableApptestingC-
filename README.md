@@ -8,24 +8,24 @@ A template for building and deploying C++ desktop applications via a single curl
 
 **PowerShell:**
 ```powershell
-irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/cpp-installer-template/main/install.ps1 | iex
 ```
 
 **Command Prompt (cmd):**
 ```cmd
-powershell -c "irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex"
+powershell -c "irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/cpp-installer-template/main/install.ps1 | iex"
 ```
 
 ### Private Repo (requires token)
 
 **PowerShell:**
 ```powershell
-$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
+$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/cpp-installer-template/main/install.ps1 | iex
 ```
 
 **Command Prompt (cmd):**
 ```cmd
-powershell -c "$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex"
+powershell -c "$env:GH_TOKEN='ghp_your_token_here'; irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/cpp-installer-template/main/install.ps1 | iex"
 ```
 
 This will:
@@ -121,7 +121,7 @@ Running the install command again will update to the latest version.
 ```powershell
 $AppName = "DeployableApp"              # Display name & install folder
 $RepoOwner = "Mohawk-RyanKilgore"       # GitHub username
-$RepoName = "DeployableApptestingC-"    # Repository name
+$RepoName = "cpp-installer-template"    # Repository name
 $ExeName = "deployableapp.exe"          # Output executable name
 ```
 
