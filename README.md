@@ -4,8 +4,14 @@ A template for building and deploying C++ desktop applications via a single curl
 
 ## For Users: Install the App
 
+**PowerShell:**
 ```powershell
 irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex
+```
+
+**Command Prompt (cmd):**
+```cmd
+powershell -c "irm https://raw.githubusercontent.com/Mohawk-RyanKilgore/DeployableApptestingC-/main/install.ps1 | iex"
 ```
 
 This will:
